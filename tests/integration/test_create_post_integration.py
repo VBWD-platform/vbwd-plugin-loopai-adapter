@@ -17,8 +17,8 @@ from plugins.cms.src.services import post_type_registry, term_type_registry
 from plugins.cms.src.services.post_type_registry import PostType
 from plugins.cms.src.services.term_type_registry import TermType
 
-CREATE_POST_URL = "/wp-json/loopai-adapter/v1/create-post"
-WP_POSTS_URL = "/wp-json/wp/v2/posts"
+CREATE_POST_URL = "/api/v1/loopai-adapter/create-post"
+WP_POSTS_URL = "/api/v1/loopai-adapter/posts"
 
 _PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n-fake").decode()
 
@@ -108,7 +108,8 @@ def test_reposting_same_title_does_not_500(client, db):
 def test_wp_posts_list_returns_created_post(client, db):
     _, plaintext = _make_key(db, scopes=["loopai:posts:create"])
     created = client.post(
-        CREATE_POST_URL, json=_broadcast_body("Listed headline"),
+        CREATE_POST_URL,
+        json=_broadcast_body("Listed headline"),
         headers={"X-API-Key": plaintext},
     )
     assert created.status_code == 200, created.get_data(as_text=True)
@@ -117,7 +118,9 @@ def test_wp_posts_list_returns_created_post(client, db):
     assert listed.status_code == 200
     items = listed.get_json()
     assert isinstance(items, list)
-    match = next((item for item in items if item["title"]["rendered"] == "Listed headline"), None)
+    match = next(
+        (item for item in items if item["title"]["rendered"] == "Listed headline"), None
+    )
     assert match is not None
     assert match["status"] == "publish"
     assert "content" in match and "rendered" in match["content"]

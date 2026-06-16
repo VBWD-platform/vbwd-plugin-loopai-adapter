@@ -1,12 +1,12 @@
-"""loopai-adapter routes — the WordPress-drop-in for the LoopAI pipeline (S95).
+"""loopai-adapter routes — the LoopAI ingest API on the classic vbwd namespace.
 
-Two endpoints, mirroring the WordPress ``wp-loopai-adapter`` plugin's URLs and
-request/response shapes so a LoopAI pipeline pointed at a vbwd instance keeps
-working unchanged (the only caller-side change: send the vbwd token via
-``X-API-Key`` instead of WP Basic-Auth):
+Two endpoints under ``/api/v1/loopai-adapter`` accepting the WordPress
+``wp-loopai-adapter`` request/response shapes so a LoopAI pipeline pointed at a
+vbwd instance keeps working (the caller-side changes: the classic URL plus the
+vbwd token via ``X-API-Key`` instead of WP Basic-Auth):
 
-- ``POST /wp-json/loopai-adapter/v1/create-post`` — create a published cms post.
-- ``GET  /wp-json/wp/v2/posts`` — a minimal WP-shaped published-post list.
+- ``POST /api/v1/loopai-adapter/create-post`` — create a published cms post.
+- ``GET  /api/v1/loopai-adapter/posts`` — a minimal WP-shaped published-post list.
 
 This module is a protocol shim. The WP→cms translation lives in
 ``LoopAiPayloadMapper``; post/image/term/SEO creation is reused verbatim from
@@ -158,8 +158,8 @@ def _upload_featured_image(
         uploaded = image_service.upload_image(
             file_data=raw_bytes, filename=filename, mime_type=mime_type
         )
-    except Exception as upload_error:  # noqa: BLE001 — bad image is non-fatal (WP parity)
-        logger.warning("[loopai-adapter] featured-image upload failed: %s", upload_error)
+    except Exception as error:  # noqa: BLE001 - bad image is non-fatal
+        logger.warning("[loopai-adapter] featured-image upload failed: %s", error)
         return 0, None
     return uploaded.get("id") or 0, uploaded.get("url_path")
 
@@ -167,10 +167,10 @@ def _upload_featured_image(
 # ── routes ───────────────────────────────────────────────────────────────────
 
 
-@loopai_adapter_bp.route("/wp-json/loopai-adapter/v1/create-post", methods=["POST"])
+@loopai_adapter_bp.route("/create-post", methods=["POST"])
 @require_api_key(CREATE_POST_SCOPE)
 def create_post():
-    """WordPress-compatible create-post endpoint, authored as the key's user."""
+    """LoopAI create-post endpoint, authored as the key's user."""
     payload = request.get_json(silent=True) or {}
     body, status_code = create_post_from_payload(
         payload,
@@ -183,7 +183,7 @@ def create_post():
     return jsonify(body), status_code
 
 
-@loopai_adapter_bp.route("/wp-json/wp/v2/posts", methods=["GET"])
+@loopai_adapter_bp.route("/posts", methods=["GET"])
 def list_posts():
     """Minimal WP-shaped list of published posts (for ``get_all_posts``)."""
     per_page = request.args.get("per_page", default=10, type=int)

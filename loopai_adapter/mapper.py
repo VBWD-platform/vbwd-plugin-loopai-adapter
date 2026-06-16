@@ -77,7 +77,9 @@ class LoopAiPayloadMapper:
             return MappedPayload(valid=False, ingest_payload={}, featured_image=None)
 
         summary = self._as_text(self._resolve_field(raw_payload, "summary"))
-        lead_paragraph = self._as_text(self._resolve_field(raw_payload, "lead_paragraph"))
+        lead_paragraph = self._as_text(
+            self._resolve_field(raw_payload, "lead_paragraph")
+        )
         article_body = self._as_text(self._resolve_field(raw_payload, "article_body"))
         tags_value = self._as_text(self._resolve_field(raw_payload, "tags"))
 
@@ -189,9 +191,12 @@ class LoopAiPayloadMapper:
         for index, image in enumerate(images):
             if index == 0:
                 continue
-            html += '<img src="%s" alt="%s" style="max-width:100%%; height:auto;" />' % (
-                self._escape_url(image["filename"]),
-                self._escape_attribute(title),
+            html += (
+                '<img src="%s" alt="%s" style="max-width:100%%; height:auto;" />'
+                % (
+                    self._escape_url(image["filename"]),
+                    self._escape_attribute(title),
+                )
             )
         return html
 

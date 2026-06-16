@@ -1,20 +1,20 @@
 # loopai-adapter
 
-A WordPress drop-in for the **LoopAI** content pipeline. It serves the same
-`/wp-json/...` endpoints the `wp-loopai-adapter` WordPress plugin exposes — but
-writes to the vbwd **CMS** and authenticates with vbwd's built-in **User API
-Token** system instead of WP Basic-Auth.
+An adapter for the **LoopAI** content pipeline. It accepts the same request and
+response shapes the `wp-loopai-adapter` WordPress plugin uses, but on the classic
+vbwd API namespace (`/api/v1/loopai-adapter/...`), writing to the vbwd **CMS** and
+authenticating with vbwd's built-in **User API Token** system instead of WP
+Basic-Auth.
 
-A LoopAI pipeline configured with `WP_SITE=<vbwd instance>` and a vbwd API token
-creates published CMS posts with no code changes other than sending the token via
-the `X-API-Key` header.
+A LoopAI pipeline pointed at a vbwd instance with a vbwd API token creates
+published CMS posts; the caller sends the token via the `X-API-Key` header.
 
 ## Endpoints
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/wp-json/loopai-adapter/v1/create-post` | `X-API-Key` scope `loopai:posts:create` | Create a published post |
-| `GET`  | `/wp-json/wp/v2/posts` | none (published only) | Minimal WP-shaped post list |
+| `POST` | `/api/v1/loopai-adapter/create-post` | `X-API-Key` scope `loopai:posts:create` | Create a published post |
+| `GET`  | `/api/v1/loopai-adapter/posts` | none (published only) | Minimal WP-shaped post list |
 
 ### `create-post`
 
@@ -46,7 +46,7 @@ plugin (`ContentIngestService` / `CmsImageService` / `PostService`). It edits
 neither core nor cms.
 
 ```
-LoopAI pipeline ──POST /wp-json/loopai-adapter/v1/create-post──▶ loopai-adapter
+LoopAI pipeline ──POST /api/v1/loopai-adapter/create-post──▶ loopai-adapter
                        LoopAiPayloadMapper (WP fields → cms ingest)
                                      │
                        cms ContentIngestService.ingest() → PostService / CmsImageService

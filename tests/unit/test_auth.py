@@ -16,7 +16,7 @@ import vbwd.middleware.api_key_auth as api_key_auth
 routes_module = import_module("plugins.loopai-adapter.loopai_adapter.routes")
 plugin_module = import_module("plugins.loopai-adapter")
 
-CREATE_POST_URL = "/wp-json/loopai-adapter/v1/create-post"
+CREATE_POST_URL = "/api/v1/loopai-adapter/create-post"
 
 
 class _FakeKey:
@@ -65,7 +65,9 @@ def client(monkeypatch, captured_user):
         return {"id": "post-1"}
 
     ingest_service.ingest.side_effect = _record_ingest
-    monkeypatch.setattr(routes_module, "_content_ingest_service", lambda: ingest_service)
+    monkeypatch.setattr(
+        routes_module, "_content_ingest_service", lambda: ingest_service
+    )
     monkeypatch.setattr(routes_module, "_image_service", lambda: MagicMock())
     monkeypatch.setattr(routes_module, "_post_service", lambda: MagicMock())
     monkeypatch.setattr(
@@ -75,7 +77,10 @@ def client(monkeypatch, captured_user):
     )
 
     app = Flask(__name__)
-    app.register_blueprint(routes_module.loopai_adapter_bp)
+    app.register_blueprint(
+        routes_module.loopai_adapter_bp,
+        url_prefix=plugin_module.LoopaiAdapterPlugin().get_url_prefix(),
+    )
     return app.test_client()
 
 
