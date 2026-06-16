@@ -1,0 +1,33 @@
+{
+  "tabs": [
+    {
+      "id": "general",
+      "label": "General",
+      "fields": [
+        {
+          "key": "debug_mode",
+          "label": "Debug Mode",
+          "component": "switch",
+          "description": "Enable verbose adapter logging"
+        },
+        {
+          "key": "default_status",
+          "label": "Default Post Status",
+          "component": "select",
+          "options": [
+            { "value": "published", "label": "Published (like WordPress)" },
+            { "value": "draft", "label": "Draft (review before publishing)" }
+          ],
+          "description": "Status applied to posts created through the adapter"
+        },
+        {
+          "key": "default_post_type",
+          "label": "Default Post Type",
+          "component": "input",
+          "inputType": "text",
+          "description": "cms post type created by the adapter (e.g. post)"
+        }
+      ]
+    }
+  ]
+}

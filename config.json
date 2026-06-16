@@ -1,0 +1,17 @@
+{
+  "debug_mode": {
+    "type": "boolean",
+    "default": false,
+    "description": "Enable verbose adapter logging"
+  },
+  "default_status": {
+    "type": "string",
+    "default": "published",
+    "description": "Status applied to created posts (published like WordPress, or draft for review)"
+  },
+  "default_post_type": {
+    "type": "string",
+    "default": "post",
+    "description": "cms post type created by the adapter"
+  }
+}
