@@ -61,7 +61,7 @@ def app():
 
         # Register the cms table the core create_app() does not auto-register so
         # it is part of the one-time create_all() (the adapter writes cms posts).
-        import plugins.cms.src.models.cms_page_widget  # noqa: F401
+        import plugins.cms.src.models.cms_post_widget  # noqa: F401
 
         ensure_schema_and_baseline(_db)
 
