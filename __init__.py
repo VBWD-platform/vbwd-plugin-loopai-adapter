@@ -35,7 +35,7 @@ class LoopaiAdapterPlugin(BasePlugin):
     def metadata(self) -> PluginMetadata:
         return PluginMetadata(
             name="loopai-adapter",
-            version="1.0.0",
+            version="26.6",
             author="VBWD Team",
             description=(
                 "WordPress-compatible LoopAI ingest API backed by the vbwd CMS"
