@@ -12,7 +12,7 @@ discovery skips classes whose ``__module__`` differs from the package module.
 from importlib import import_module
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from vbwd.plugins.base import BasePlugin, PluginMetadata
+from vbwd.plugins.base import BasePlugin, PluginMetadata, PublicRouteDeclaration
 
 if TYPE_CHECKING:
     from flask import Blueprint
@@ -49,6 +49,14 @@ class LoopaiAdapterPlugin(BasePlugin):
         if config:
             merged.update(config)
         super().initialize(merged)
+
+    def declare_public_routes(self) -> PublicRouteDeclaration:
+        """Public published-post listing for the LoopAI WP adapter."""
+        return PublicRouteDeclaration(
+            read={
+                "/api/v1/loopai-adapter/posts": "Public published-post listing for the LoopAI WP adapter.",
+            },
+        )
 
     def get_blueprint(self) -> Optional["Blueprint"]:
         # The plugin directory is hyphenated, so the inner package is reached via
