@@ -20,11 +20,11 @@ jobs:
           repository: VBWD-platform/vbwd-backend
           path: vbwd-backend
 
-      # ── 2. Clone plugin directly into vbwd-backend/plugins/loopai-adapter ────
+      # ── 2. Clone plugin directly into vbwd-backend/plugins/loopai_adapter ────
       - name: Clone plugin
         uses: actions/checkout@v4
         with:
-          path: vbwd-backend/plugins/loopai-adapter
+          path: vbwd-backend/plugins/loopai_adapter
 
       # ── Clone declared peer plugins so on_enable / imports resolve ──
       - name: Clone peer dependencies
@@ -47,19 +47,19 @@ jobs:
       - name: Style check — Black
         run: |
           black --check --diff \
-            vbwd-backend/plugins/loopai-adapter/ \
+            vbwd-backend/plugins/loopai_adapter/ \
             --exclude='/(\.git|\.github|__pycache__|\.pytest_cache)/'
 
       - name: Style check — Flake8
         run: |
-          flake8 vbwd-backend/plugins/loopai-adapter/ \
+          flake8 vbwd-backend/plugins/loopai_adapter/ \
             --max-line-length=120 \
             --extend-ignore=E203,W503 \
             --exclude=.git,.github,__pycache__,.pytest_cache
 
       - name: Style check — Mypy
         run: |
-          PLUGIN_SRC=vbwd-backend/plugins/loopai-adapter/src
+          PLUGIN_SRC=vbwd-backend/plugins/loopai_adapter/src
           if [ -d "$PLUGIN_SRC" ]; then
             mypy "$PLUGIN_SRC" \
               --ignore-missing-imports \
@@ -93,11 +93,11 @@ jobs:
         working-directory: vbwd-backend
         run: |
           mkdir -p test-results
-          if [ -d "plugins/loopai-adapter/tests/unit" ]; then
-            TESTS_DIR="plugins/loopai-adapter/tests/unit/"
-          elif [ -d "plugins/loopai-adapter/tests" ]; then
-            TESTS_DIR="plugins/loopai-adapter/tests/"
-            IGNORE="--ignore=plugins/loopai-adapter/tests/integration/"
+          if [ -d "plugins/loopai_adapter/tests/unit" ]; then
+            TESTS_DIR="plugins/loopai_adapter/tests/unit/"
+          elif [ -d "plugins/loopai_adapter/tests" ]; then
+            TESTS_DIR="plugins/loopai_adapter/tests/"
+            IGNORE="--ignore=plugins/loopai_adapter/tests/integration/"
           else
             echo "No unit tests — skipping."
             exit 0
@@ -112,9 +112,9 @@ jobs:
         if: always()
         working-directory: vbwd-backend
         run: |
-          if [ -d "plugins/loopai-adapter/tests/integration" ]; then
+          if [ -d "plugins/loopai_adapter/tests/integration" ]; then
             docker compose --profile test run --rm -T test \
-              pytest plugins/loopai-adapter/tests/integration/ \
+              pytest plugins/loopai_adapter/tests/integration/ \
               -v --tb=short \
               --junit-xml=/app/test-results/integration.xml
           else

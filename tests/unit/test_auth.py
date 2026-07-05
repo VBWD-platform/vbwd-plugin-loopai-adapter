@@ -13,8 +13,8 @@ from flask import Flask
 
 import vbwd.middleware.api_key_auth as api_key_auth
 
-routes_module = import_module("plugins.loopai-adapter.loopai_adapter.routes")
-plugin_module = import_module("plugins.loopai-adapter")
+routes_module = import_module("plugins.loopai_adapter.loopai_adapter.routes")
+plugin_module = import_module("plugins.loopai_adapter")
 
 CREATE_POST_URL = "/api/v1/loopai-adapter/create-post"
 

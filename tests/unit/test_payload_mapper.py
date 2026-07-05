@@ -4,7 +4,7 @@ from importlib import import_module
 
 import pytest
 
-mapper_module = import_module("plugins.loopai-adapter.loopai_adapter.mapper")
+mapper_module = import_module("plugins.loopai_adapter.loopai_adapter.mapper")
 LoopAiPayloadMapper = mapper_module.LoopAiPayloadMapper
 
 

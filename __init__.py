@@ -61,7 +61,7 @@ class LoopaiAdapterPlugin(BasePlugin):
     def get_blueprint(self) -> Optional["Blueprint"]:
         # The plugin directory is hyphenated, so the inner package is reached via
         # import_module (a normal ``from`` statement cannot name a hyphen dir).
-        routes_module = import_module("plugins.loopai-adapter.loopai_adapter.routes")
+        routes_module = import_module("plugins.loopai_adapter.loopai_adapter.routes")
         return routes_module.loopai_adapter_bp
 
     def get_url_prefix(self) -> Optional[str]:

@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 from plugins.cms.src.services.post_service import PostSlugConflictError
 
-routes_module = import_module("plugins.loopai-adapter.loopai_adapter.routes")
+routes_module = import_module("plugins.loopai_adapter.loopai_adapter.routes")
 create_post_from_payload = routes_module.create_post_from_payload
 
 _CONFIG = {"default_status": "published", "default_post_type": "post"}
