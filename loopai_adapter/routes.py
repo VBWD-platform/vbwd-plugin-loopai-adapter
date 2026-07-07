@@ -33,6 +33,7 @@ CREATE_POST_SCOPE = "loopai:posts:create"
 # Baseline config fallbacks (the plugin also ships config.json / admin-config.json).
 DEFAULT_STATUS = "published"
 DEFAULT_POST_TYPE = "post"
+DEFAULT_PARENT_CATEGORY = "blog"
 
 # cms post-status -> WordPress post-status for the read endpoint.
 _WP_STATUS = {"published": "publish", "draft": "draft", "private": "private"}
@@ -69,7 +70,11 @@ def _adapter_config() -> Dict[str, Any]:
         config = config_store.get_config(PLUGIN_NAME)
         if config:
             return config
-    return {"default_status": DEFAULT_STATUS, "default_post_type": DEFAULT_POST_TYPE}
+    return {
+        "default_status": DEFAULT_STATUS,
+        "default_post_type": DEFAULT_POST_TYPE,
+        "default_parent_category": DEFAULT_PARENT_CATEGORY,
+    }
 
 
 # ── create-post handler (pure-ish: services injected so it is unit-testable) ──
@@ -102,6 +107,9 @@ def create_post_from_payload(
         payload,
         default_status=config.get("default_status", DEFAULT_STATUS),
         default_post_type=config.get("default_post_type", DEFAULT_POST_TYPE),
+        default_parent_category=config.get(
+            "default_parent_category", DEFAULT_PARENT_CATEGORY
+        ),
     )
     if not mapped.valid:
         return {"status": "error", "message": "Missing required fields"}, 422
@@ -114,6 +122,10 @@ def create_post_from_payload(
         featured_image_id, featured_image_url = _upload_featured_image(
             mapped.featured_image, image_service
         )
+        if featured_image_url:
+            # og:image == the uploaded featured image (the mapper set the rest of
+            # the seo block; the URL is only known after the upload above).
+            ingest_payload.setdefault("seo", {})["og_image_url"] = featured_image_url
 
     # Imported here so the route module imports without the cms plugin loaded
     # (e.g. unit tests that mock the services).

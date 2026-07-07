@@ -93,6 +93,38 @@ def test_slug_conflict_returns_409_not_500():
     assert body["status"] == "error"
 
 
+def test_og_image_url_set_to_uploaded_featured_image():
+    ingest = MagicMock()
+    ingest.ingest.return_value = {"id": "post-1", "slug": "headline"}
+    image = MagicMock()
+    image.upload_image.return_value = {"id": "img-1", "url_path": "/uploads/hero.png"}
+
+    payload = {
+        "title": "Headline",
+        "summary": "S",
+        "image_base64": base64.b64encode(b"png-bytes").decode(),
+        "image_file": "hero.png",
+    }
+    body, status = _call(payload, ingest=ingest, image=image)
+
+    assert status == 200
+    sent_payload = ingest.ingest.call_args.args[0]
+    # og:image == the uploaded featured image, injected into the seo sub-object.
+    assert sent_payload["seo"]["og_image_url"] == "/uploads/hero.png"
+
+
+def test_no_image_does_not_inject_og_image_url():
+    ingest = MagicMock()
+    ingest.ingest.return_value = {"id": "post-1"}
+    image = MagicMock()
+
+    body, status = _call({"title": "T", "summary": "S"}, ingest=ingest, image=image)
+
+    assert status == 200
+    sent_payload = ingest.ingest.call_args.args[0]
+    assert "og_image_url" not in sent_payload.get("seo", {})
+
+
 def test_no_image_reports_featured_image_id_zero():
     ingest = MagicMock()
     ingest.ingest.return_value = {"id": "post-1"}

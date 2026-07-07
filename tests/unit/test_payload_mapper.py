@@ -23,31 +23,110 @@ def test_guesses_article_body_from_messy_key(mapper, messy_key):
     assert "<div>the body text</div>" in result.ingest_payload["content_html"]
 
 
-def test_category_fallback_prefers_main_then_sub_then_category(mapper):
-    result = _map(
-        mapper,
-        {
-            "title": "T",
-            "main_category": "Main",
-            "sub_category": "Sub",
-            "category": "Plain",
-        },
-    )
-    assert result.ingest_payload["categories"] == ["Main"]
-
-    result = _map(mapper, {"title": "T", "sub_category": "Sub", "category": "Plain"})
-    assert result.ingest_payload["categories"] == ["Sub"]
-
-    result = _map(mapper, {"title": "T", "category": "Plain"})
-    assert result.ingest_payload["categories"] == ["Plain"]
+def test_categories_hierarchy_subcat_from_sub_category(mapper):
+    """New contract: parent 'blog' + a subcategory child taken from sub_category."""
+    result = _map(mapper, {"title": "T", "sub_category": "AI", "category": "Plain"})
+    assert result.ingest_payload["categories"] == [
+        {"name": "blog"},
+        {"name": "AI", "parent": "blog"},
+    ]
 
 
-def test_category_comma_split_and_no_category_is_empty(mapper):
-    result = _map(mapper, {"title": "T", "category": "News, Tech ,  AI"})
-    assert result.ingest_payload["categories"] == ["News", "Tech", "AI"]
+def test_categories_hierarchy_falls_back_to_category(mapper):
+    """No sub_category → the subcategory is the first comma-split of ``category``."""
+    result = _map(mapper, {"title": "T", "category": "News, Tech"})
+    assert result.ingest_payload["categories"] == [
+        {"name": "blog"},
+        {"name": "News", "parent": "blog"},
+    ]
 
+
+def test_categories_empty_sub_category_falls_back_to_category(mapper):
+    result = _map(mapper, {"title": "T", "sub_category": "  ", "category": "Tech"})
+    assert result.ingest_payload["categories"] == [
+        {"name": "blog"},
+        {"name": "Tech", "parent": "blog"},
+    ]
+
+
+def test_categories_blog_only_when_no_subcategory(mapper):
     result = _map(mapper, {"title": "T"})
-    assert result.ingest_payload["categories"] == []
+    assert result.ingest_payload["categories"] == [{"name": "blog"}]
+
+
+def test_categories_parent_configurable(mapper):
+    result = mapper.map(
+        {"title": "T", "sub_category": "AI"},
+        default_status="published",
+        default_post_type="post",
+        default_parent_category="journal",
+    )
+    assert result.ingest_payload["categories"] == [
+        {"name": "journal"},
+        {"name": "AI", "parent": "journal"},
+    ]
+
+
+def test_excerpt_from_summary_html_stripped(mapper):
+    result = _map(mapper, {"title": "T", "summary": "<p>Hello <b>world</b></p>"})
+    assert result.ingest_payload["excerpt"] == "Hello world"
+
+
+def test_excerpt_falls_back_to_lead_paragraph(mapper):
+    result = _map(mapper, {"title": "T", "lead_paragraph": "Lead text here"})
+    assert result.ingest_payload["excerpt"] == "Lead text here"
+
+
+def test_excerpt_truncated_on_word_boundary(mapper):
+    long_summary = "word " * 100  # ~500 chars once collapsed
+    result = _map(mapper, {"title": "T", "summary": long_summary})
+    excerpt = result.ingest_payload["excerpt"]
+    assert len(excerpt) <= 300
+    # No mid-word cut: every token is the whole word.
+    assert set(excerpt.split()) == {"word"}
+
+
+def test_no_excerpt_when_no_source_text(mapper):
+    result = _map(mapper, {"title": "T"})
+    assert "excerpt" not in result.ingest_payload
+
+
+def test_seo_titles_equal_the_title(mapper):
+    result = _map(mapper, {"title": "My Headline", "summary": "S"})
+    seo = result.ingest_payload["seo"]
+    assert seo["meta_title"] == "My Headline"
+    assert seo["og_title"] == "My Headline"
+
+
+def test_seo_description_derived_from_summary_and_truncated(mapper):
+    long_summary = "alpha " * 60  # ~360 chars once collapsed
+    result = _map(mapper, {"title": "T", "summary": long_summary})
+    seo = result.ingest_payload["seo"]
+    assert seo["meta_description"] == seo["og_description"]
+    assert len(seo["meta_description"]) <= 160
+    assert set(seo["meta_description"].split()) == {"alpha"}
+
+
+def test_seo_description_falls_back_to_lead_paragraph_and_strips_html(mapper):
+    result = _map(mapper, {"title": "T", "lead_paragraph": "Lead <i>text</i>"})
+    seo = result.ingest_payload["seo"]
+    assert seo["meta_description"] == "Lead text"
+    assert seo["og_description"] == "Lead text"
+
+
+def test_seo_description_omitted_when_no_source_but_titles_present(mapper):
+    result = _map(mapper, {"title": "Only title"})
+    seo = result.ingest_payload["seo"]
+    assert seo["meta_title"] == "Only title"
+    assert "meta_description" not in seo
+    assert "og_description" not in seo
+
+
+def test_seo_does_not_set_canonical_or_robots(mapper):
+    result = _map(mapper, {"title": "T", "summary": "S"})
+    seo = result.ingest_payload["seo"]
+    assert "canonical_url" not in seo
+    assert "robots" not in seo
 
 
 def test_recursive_image_extraction_in_document_order(mapper):

@@ -42,7 +42,21 @@ IMAGE_FILE_KEY = "image_file"
 # of creating a junk term, but keep the constant for the (single) named default.
 DEFAULT_CATEGORY = "Uncategorized"
 
+# Every ingested post lands under this top-level category; the request's
+# sub_category / category becomes a child subcategory below it. Overridable via
+# the plugin's ``default_parent_category`` config.
+DEFAULT_PARENT_CATEGORY = "blog"
+
+# Synthesized-field limits: the excerpt is a short teaser; the SEO description
+# tracks the ~160-char meta-description convention; SEO titles ride the model's
+# 255-char column. Truncation snaps back to the last word boundary.
+EXCERPT_MAX_LENGTH = 300
+SEO_DESCRIPTION_MAX_LENGTH = 160
+SEO_TITLE_MAX_LENGTH = 255
+
 _NON_ALPHANUMERIC = re.compile(r"[^a-z0-9]")
+_HTML_TAG = re.compile(r"<[^>]+>")
+_WHITESPACE = re.compile(r"\s+")
 
 
 @dataclass
@@ -70,6 +84,7 @@ class LoopAiPayloadMapper:
         *,
         default_status: str,
         default_post_type: str,
+        default_parent_category: str = DEFAULT_PARENT_CATEGORY,
     ) -> MappedPayload:
         """Map a free-form WordPress payload to a cms ``ContentIngestService`` dict."""
         title = self._as_text(self._resolve_field(raw_payload, "title"))
@@ -97,14 +112,58 @@ class LoopAiPayloadMapper:
             "title": title,
             "content_html": content_html,
             "status": default_status,
-            "categories": self._resolve_categories(raw_payload),
+            "categories": self._resolve_categories(
+                raw_payload, default_parent_category
+            ),
             "tags": self._split_csv(tags_value),
         }
+
+        excerpt = self._build_excerpt(summary, lead_paragraph)
+        if excerpt:
+            ingest_payload["excerpt"] = excerpt
+
+        seo = self._build_seo(title, summary, lead_paragraph)
+        if seo:
+            ingest_payload["seo"] = seo
 
         featured_image = images[0] if images else None
         return MappedPayload(
             valid=True, ingest_payload=ingest_payload, featured_image=featured_image
         )
+
+    # ── synthesized excerpt + SEO (loopai sends none — we derive them) ──────
+
+    def _build_excerpt(self, summary: str, lead_paragraph: str) -> Optional[str]:
+        """Excerpt from ``summary`` (fallback ``lead_paragraph``), plain + trimmed."""
+        text = self._plain_text(summary) or self._plain_text(lead_paragraph)
+        if not text:
+            return None
+        return self._truncate_on_word_boundary(text, EXCERPT_MAX_LENGTH)
+
+    def _build_seo(
+        self, title: str, summary: str, lead_paragraph: str
+    ) -> Dict[str, str]:
+        """Synthesize meta/OpenGraph title + description; omit empty sources.
+
+        Canonical URL and robots are deliberately left unset so the cms post keeps
+        its model defaults (og:image is injected by the route once uploaded).
+        """
+        seo: Dict[str, str] = {}
+        trimmed_title = title.strip()[:SEO_TITLE_MAX_LENGTH]
+        if trimmed_title:
+            seo["meta_title"] = trimmed_title
+            seo["og_title"] = trimmed_title
+
+        description_source = self._plain_text(summary) or self._plain_text(
+            lead_paragraph
+        )
+        description = self._truncate_on_word_boundary(
+            description_source, SEO_DESCRIPTION_MAX_LENGTH
+        )
+        if description:
+            seo["meta_description"] = description
+            seo["og_description"] = description
+        return seo
 
     # ── field guessing (port of DataExtractor) ──────────────────────────────
 
@@ -116,18 +175,32 @@ class LoopAiPayloadMapper:
                 return value
         return self._recursive_search(raw_payload, self._clean_key(key))
 
-    def _resolve_categories(self, raw_payload: Any) -> List[str]:
-        """Category fallback (main → sub → category), comma-split, empties dropped."""
-        category_value = None
-        if isinstance(raw_payload, dict):
-            for candidate_key in ("main_category", "sub_category"):
-                candidate = raw_payload.get(candidate_key)
-                if candidate is not None:
-                    category_value = candidate
-                    break
-        if category_value is None:
-            category_value = self._resolve_field(raw_payload, "category")
-        return self._split_csv(self._as_text(category_value))
+    def _resolve_categories(
+        self, raw_payload: Any, default_parent_category: str
+    ) -> List[Dict[str, str]]:
+        """Hierarchy: parent = ``default_parent_category`` + a subcategory child.
+
+        The subcategory is ``sub_category`` when present/non-empty, else the first
+        comma-split value of ``category``. When neither yields a value the post
+        lands under the parent category only.
+        """
+        subcategory = self._resolve_subcategory(raw_payload)
+        if subcategory:
+            return [
+                {"name": default_parent_category},
+                {"name": subcategory, "parent": default_parent_category},
+            ]
+        return [{"name": default_parent_category}]
+
+    def _resolve_subcategory(self, raw_payload: Any) -> Optional[str]:
+        """First non-empty of ``sub_category`` then ``category`` (comma → first)."""
+        for field_name in ("sub_category", "category"):
+            parts = self._split_csv(
+                self._as_text(self._resolve_field(raw_payload, field_name))
+            )
+            if parts:
+                return parts[0]
+        return None
 
     def _recursive_search(self, data: Any, clean_pattern: str) -> Any:
         """Depth-first, pre-order search for a key whose cleaned form matches."""
@@ -230,3 +303,20 @@ class LoopAiPayloadMapper:
     @staticmethod
     def _split_csv(value: str) -> List[str]:
         return [part.strip() for part in value.split(",") if part.strip()]
+
+    @classmethod
+    def _plain_text(cls, value: Any) -> str:
+        """Strip HTML tags and collapse whitespace to a single-spaced string."""
+        without_tags = _HTML_TAG.sub(" ", cls._as_text(value))
+        return _WHITESPACE.sub(" ", without_tags).strip()
+
+    @staticmethod
+    def _truncate_on_word_boundary(text: str, max_length: int) -> str:
+        """Truncate to at most ``max_length`` chars, snapping to a word boundary."""
+        if len(text) <= max_length:
+            return text
+        truncated = text[:max_length].rstrip()
+        last_space = truncated.rfind(" ")
+        if last_space > 0:
+            truncated = truncated[:last_space]
+        return truncated.rstrip()

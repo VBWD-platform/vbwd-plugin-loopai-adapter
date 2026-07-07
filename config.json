@@ -13,5 +13,10 @@
     "type": "string",
     "default": "post",
     "description": "cms post type created by the adapter"
+  },
+  "default_parent_category": {
+    "type": "string",
+    "default": "blog",
+    "description": "Top-level category every ingested post is filed under (its sub_category/category becomes a child subcategory)"
   }
 }
