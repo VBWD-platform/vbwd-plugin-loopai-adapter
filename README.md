@@ -62,3 +62,11 @@ LoopAI pipeline ──POST /api/v1/loopai-adapter/create-post──▶ loopai-ad
 ```bash
 bin/pre-commit-check.sh --plugin loopai-adapter --full
 ```
+
+## Documentation
+
+Full platform documentation lives at **[vbwd.cc/docs](https://vbwd.cc/docs)**.
+
+- [Plugin system](https://vbwd.cc/docs-plugin-system) — how backend plugins are registered, enabled, and configured
+- [Architecture](https://vbwd.cc/docs-architecture) — platform layering and the core-agnosticism rule
+- [Getting started](https://vbwd.cc/docs-getting-started) — install a VBWD instance and enable plugins
